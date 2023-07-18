@@ -52,6 +52,24 @@ function(input, output, session) {
   output$inputdata <- DT::renderDataTable({inputfile()}, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
   
   
+  # PFSr analysis
+  output$stats_summary <- renderTable({
+    df <- inputfile()
+    df$ratio <- df$PFS2 / df$PFS1
+    
+    if(input$modified == TRUE) {
+      df <- modify_PFS(df, delta = input$delta, min_pfs2 = input$min_pfs2 )
+    }
+    
+    res <- prophets_summary(
+      data = df,
+      delta = input$delta
+    )
+  })
+  
+  # PFSr visualization
+  
+  
   # Sample size calculator
   output$scalc_results <- renderTable({
     

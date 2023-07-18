@@ -32,8 +32,22 @@ dashboardPage(
               DT::dataTableOutput("inputdata")
               ),
       
-      tabItem(tabName = "pfsra"),
-      
+      tabItem(tabName = "pfsra",
+              fluidRow(
+                column(3, numericInput("delta", "Delta", min = 0.1, max = 3, value = 1, step = 0.1) ),
+                column(3, numericInput("prob", "Probability", min = 0.01, max = 1, step = 0.01, value = 0.5) )
+              ),
+              fluidRow(
+                column(3, checkboxInput("modified", "Modified", FALSE)),
+                column(6, numericInput("min_pfs2", "Minimal PFS2 in months", min = 0, value = 0.6))
+              ),
+              fluidRow(column(12,
+                              h4("Model summary"),
+                              tableOutput("stats_summary"))
+                       )
+              ),
+              
+
       tabItem(tabName = "pfsrv"),
       
       tabItem(tabName = "scalc",
