@@ -4,41 +4,51 @@ function(input, output, session) {
   
   # Data upload
   
-  ## The selected file, if any
+  ## Get the path to the file
   userFile <- reactive({
     # If no file is selected, don't do anything
     validate(need(input$file, message = FALSE))
     input$file
   })
   
-  ## The user's data, parsed into a data frame
+  ## Read the data
   inputfile <- reactive({
-    read.csv(userFile()$datapath,
-             header = TRUE,
-             #quote = input$quote,
+    delim <- input$btn_delim
+    read.delim(userFile()$datapath,
+             header = input$btn_header,
+             sep = ifelse(delim == "comma", ",",
+                          ifelse(delim == "semicolon", ";",
+                                 ifelse(delim == "space", "", "\t"))),
+             quote = ifelse(input$btn_quotes == TRUE, "\"'", ""),
              stringsAsFactors = FALSE)
   })
   
-  # We can run observers in here if we want to
+  ## Print message if file was successfully uploaded
   observe({
     msg <- sprintf("File %s was uploaded", userFile()$name)
     cat(msg, "\n")
   })
   
-  observeEvent(input$file, {
+
+  ## Check that necessary columns are present
+  observeEvent(inputfile(), {
+    
     columns_required <- c("PFS1", "PFS2")
     columns_actual <- names(inputfile())
     
-    duration <- NULL
+    duration <- 5
     
     if( all(columns_required %in% columns_actual) ) {
       msg_dataUpload <- "All required columns are present."
       type <- "default"
-      duration <- 5
+      removeCssClass(selector = "a[data-value='pfsra']", class = "inactiveLink")
+      removeCssClass(selector = "a[data-value='pfsrv']", class = "inactiveLink")
+      
     } else {
-      print(columns_actual)
       msg_dataUpload <-  paste("The following columns are missing:", paste(columns_required[!columns_required %in% columns_actual], collapse = ", " ) )
       type <- "error"
+      addCssClass(selector = "a[data-value='pfsra']", class = "inactiveLink")
+      addCssClass(selector = "a[data-value='pfsrv']", class = "inactiveLink")
     }
     
     showNotification(
@@ -50,7 +60,6 @@ function(input, output, session) {
   })
   
   output$inputdata <- DT::renderDataTable({inputfile()}, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 10))
-  
   
   # PFSr analysis
   output$stats_summary <- renderTable({
@@ -69,6 +78,60 @@ function(input, output, session) {
   
   # PFSr visualization
   
+  ## Swimmer plot
+  output$plot_swimmer <- renderPlot({
+    df <- inputfile()
+    df$ratio <- df$PFS2 / df$PFS1
+    if(input$modified == TRUE) {
+      df <- modify_PFS(df, delta = input$delta_pfsrv, min_pfs2 = input$min_pfs2_pfsrv )
+    }
+    res <- swimmerplot_PFSr(
+      df, 
+      delta = input$delta_pfsrv)
+    return(res)
+  })
+  
+  ## Correlation of PFS1 and PFS2
+  output$plot_pfs_correlation <- renderPlot({
+    df <- inputfile()
+    df$ratio <- df$PFS2 / df$PFS1
+    
+    if(input$modified == TRUE) {
+      df <- modify_PFS(df, delta = input$delta, min_pfs2 = input$min_pfs2 )
+    }
+    res <- plot_correlation_PFS(
+      df, 
+      delta = input$delta_pfsrv,
+      log_scale = input$logscale)
+    return(res)
+    
+  })
+  
+  ## Cumulative Hazard Ratio
+  output$plot_cumhaz <- renderPlot({
+    df <- inputfile()
+    df$ratio <- df$PFS2 / df$PFS1
+    if(input$modified == TRUE) {
+      df <- modify_PFS(df, delta = input$delta_pfsrv, min_pfs2 = input$min_pfs2_pfsrv )
+    }
+    res <- plot_cumHaz(
+      df,  
+      selected_PFS = input$cumhaz 
+    )
+    return(res)
+  })
+  
+  ## Weibull plot
+  output$plot_weibull <- renderPlot({
+    df <- inputfile()
+    df$ratio <- df$PFS2 / df$PFS1
+    if(input$modified == TRUE) {
+      df <- modify_PFS(df, delta = input$delta_pfsrv, min_pfs2 = input$min_pfs2_pfsrv )
+    }
+    res <- plot_weibull(df)
+    return(res)
+    
+  })
   
   # Sample size calculator
   output$scalc_results <- renderTable({

@@ -1,4 +1,5 @@
 library(shinydashboard)
+library(shinyjs)
 
 dashboardPage(
   skin = "black",
@@ -9,9 +10,15 @@ dashboardPage(
   
   dashboardSidebar(
     
-    sidebarMenu(
+    useShinyjs(),
+    
+    sidebarMenu(id = "sidebar",
+                tags$head(tags$style(".inactiveLink {
+                                     pointer-events: none;
+                                     cursor: none;
+                                     }")),
       menuItem("Home", tabName = "home", icon = icon("house")),
-      menuItem("PFS ratio", tabName = "pfsratio",
+      menuItem("PFS ratio", tabName = "pfsratio", startExpanded = TRUE,
                menuSubItem("Data upload", tabName = "dataupload", icon = icon("upload")),
                menuSubItem("PFSr analysis", tabName = "pfsra", icon = icon("subscript")),
                menuSubItem("PFSr visualization", tabName = "pfsrv", icon = icon("chart-column"))
@@ -28,6 +35,21 @@ dashboardPage(
       tabItem(tabName = "home"),
       
       tabItem(tabName = "dataupload",
+              fluidRow(
+                column(4, radioButtons("btn_delim", "Delimiter", choices = c("comma", "semicolon", "space", "tab"))),
+                column(4,
+                       fluidRow(
+                         column(3, 
+                                div(style = "display: inline-block; vertical-align: -20px;",
+                                    checkboxInput("btn_header", "Header", value = TRUE))
+                         )
+                         
+                       ),
+                       fluidRow(
+                         column(3, checkboxInput("btn_quotes", "Quotes", value = TRUE))
+                       )
+                )
+              ),
               fileInput("file", label = NULL),
               DT::dataTableOutput("inputdata")
               ),
@@ -48,7 +70,31 @@ dashboardPage(
               ),
               
 
-      tabItem(tabName = "pfsrv"),
+      tabItem(tabName = "pfsrv",
+              
+              numericInput("delta_pfsrv", "Delta", min = 0.1, max = 3, value = 1, step = 0.1),
+              fluidRow(
+                column(3, checkboxInput("modified_pfsrv", "Modified", FALSE)),
+                column(6, numericInput("min_pfs2_pfsrv", "Minimal PFS2 in months", min = 0, value = 0.6))
+              ),
+              tabsetPanel(
+                tabPanel("Swimmer plot",
+                         plotOutput("plot_swimmer")
+                ),
+                tabPanel("Correlation between PFS1 and PFS2",
+                         checkboxInput("logscale", "log scale", value = FALSE),
+                         plotOutput("plot_pfs_correlation")
+                         ),
+                tabPanel("Cumulative hazard ratio",
+                         checkboxGroupInput("cumhaz", label = NULL, choices = c("PFS1", "PFS2"), selected = c("PFS1", "PFS2")),
+                         plotOutput("plot_cumhaz")
+                         ),
+                tabPanel("Weibull plot",
+                         plotOutput("plot_weibull")
+                         ),
+              )
+              
+              ),
       
       tabItem(tabName = "scalc",
               fluidRow(
